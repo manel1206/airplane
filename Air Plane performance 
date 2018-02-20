@@ -1,0 +1,50 @@
+Air plane performance project 
+ 
+notre architecture : 
+
+Project parent :  Air plane performance (packaging pom / maven project)
+  1-->project fils 1 :  Web (maven module/packaging jar)
+  2-->project fils 2(parent) :  processing (maven module / packaging pom)
+        |
+        |--> Project fils 2.1 : Kafka Consumer (maven module packaging jar)
+        |--> Peroject fils 2.2: Batch processing (maven module packaging jar)
+        |--> project fils 2.3  : speed processing (maven module packaging jar)  
+
+
+
+
+First step : Data preparation
+   ---> creation of topics in the server (ssh root@192.168.1.111)
+ M.Carriers
+ M.Planedate
+ M.OTP
+
+ second step : Batch Ingestion (HDFS)
+
+· Raw layer (Store data AS-IS)
+Use Apache Flume to consume messages from Airports &
+Planedate Kafka Topic to HDFS Raw folder
+
+      --->Creation of the file that contain agent's configuration "flume-kafkaSource-hdfsSink-manel.conf" nanin the conf file of flume (server)
+      --->the contenant of the file is (after a long search )KafkaFlume.sources=kafka-source
+KafkaFlume.channels = kafka-channel
+KafkaFlume.sinks = hdfs-sink
+
+KafkaFlume.channels.kafka-channel.type = org.apache.flume.channel.kafka.KafkaCh$
+KafkaFlume.channels.kafka-channel.kafka.bootstrap.servers = 192.168.1.111:6667
+KafkaFlume.channels.kafka-channel.kafka.topic = M.Airports,M.Planedate
+KafkaFlume.channels.kafka-channel.parseAsFlumeEvent = false
+
+KafkaFlume.sinks.hdfs-sink.channel = kafka-channel
+KafkaFlume.sinks.hdfs-sink.type = hdfs
+KafkaFlume.sinks.hdfs-sink.hdfs.path = hdfs://192.168.1.111:8020/user/Manel/data/Raw
+
+       ---> runing the agent with the commande line : flume-ng agent -n KafkaFlume -f /usr/hdp/2.6.1.0-129/flume/conf/flume-kafkaSource-hdfsSink-manel.conf
+
+            
+
+o Use Spark Streaming to consume messages from Carriers
+and OTP Kafka Topic to HDFS Raw folder
+ write a Java Api that consume msg from kafka and write in in hdfs (KafkaSparkStream)
+
+
