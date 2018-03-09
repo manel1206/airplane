@@ -29,7 +29,7 @@ public class Producer {
 				"org.apache.kafka.common.serialization.StringDeserializer");
 		kafkaParams.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
 				"org.apache.kafka.common.serialization.StringDeserializer");
-		kafkaParams.put(ConsumerConfig.GROUP_ID_CONFIG, "group1");
+		kafkaParams.put(ConsumerConfig.GROUP_ID_CONFIG, "group111");
 		kafkaParams.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 		kafkaParams.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
 		return kafkaParams;

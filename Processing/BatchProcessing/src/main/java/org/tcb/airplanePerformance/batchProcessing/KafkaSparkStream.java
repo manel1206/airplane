@@ -5,8 +5,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.spark.streaming.Durations;
@@ -36,13 +36,7 @@ public class KafkaSparkStream {
 	}
 
 	public static void main(String[] args) throws InterruptedException {
-		if (args.length < 3) {
-			System.err.print("params?!");
-			System.exit(1);
-		}
-		String destFolder = args[0];
-		String clusterName = args[1];
-		
+
 		List<String> topics = new ArrayList<>();
 		topics = Arrays.asList("M.OTP", "M.Carriers");
 
@@ -50,20 +44,31 @@ public class KafkaSparkStream {
 
 		SparkConf sparkConf = new SparkConf().setAppName("consumeTopicsWithSpark");
 
-		JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(2));
+		JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(60));
 
+		JavaInputDStream<ConsumerRecord<String, String>> stream = KafkaUtils.createDirectStream(jssc,
+				LocationStrategies.PreferConsistent(), ConsumerStrategies.<String, String>Subscribe(topics, KafkaParm));
+
+		JavaDStream<String> lines = stream.map(kafkaRecord -> kafkaRecord.value());
+
+		JavaDStream<String> otp = lines.filter(l -> l.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)").length > 2);
+		JavaDStream<String> carr = lines.filter(l -> l.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)").length == 2);
+
+//		otp.dstream().saveAsTextFiles("hdfs://tcbcluster/user/Manel/data/Raw/otp/", "");
+//		carr.dstream().saveAsTextFiles("hdfs://tcbcluster/user/Manel/data/Raw/carr/", "");
+		otp.foreachRDD ( rdd -> { if (!rdd.isEmpty())
+			rdd.saveAsTextFile("hdfs://tcbcluster/user/Manel/data/Raw/otp/" +UUID.randomUUID());
+		});
+		carr.foreachRDD ( rdd2 -> { if (!rdd2.isEmpty())
+			rdd2.saveAsTextFile ("hdfs://tcbcluster/user/Manel/data/Raw/carr/"+ UUID.randomUUID() );
+		});
 		
-			JavaInputDStream<ConsumerRecord<String, String>> stream = KafkaUtils.createDirectStream(jssc,
-					LocationStrategies.PreferConsistent(),
-					ConsumerStrategies.<String, String>Subscribe(topics, KafkaParm));
-				
-			JavaDStream<String> lines = stream.map(kafkaRecord -> kafkaRecord.value());
-			//lines.print();
-			lines.dstream().saveAsTextFiles("hdfs://"+clusterName , "");
-
-			jssc.start();
-			jssc.awaitTermination();
-			jssc.stop();
+		
+		//otp.dstream().saveAsTextFiles("hdfs://tcbcluster/user/Manel/data/Raw/carr/", "");
+		
+		jssc.start();
+		jssc.awaitTermination();
+		jssc.stop();
 
 	}
 
